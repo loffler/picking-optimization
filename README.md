@@ -1,37 +1,25 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Picking Optimization
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This is a small Nest.js app that provides single endpoint for order picking optimization.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+As input, it takes list of product IDs that need to be picked and starting position for picking.
 
-## Description
+The result is picking path - a list of product positions in a warehouse ordered in a manner that it
+takes (nearly) shortest distance to pick them up. Total distance of the path is also included in the response.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## How does it work
+The app uses very simple algorithm called "nearest neighbor" for finding the path. It means that the picker always picks the nearest
+product from order. It may not always find the most optimal path, but it is fast and provides fair results generally.
 
-## Installation
+There are many better (and more complex) algorithms, e. g. Christofides algorithm for this.
 
-```bash
-$ yarn install
-```
+The product positions in warehouse are retrieved from external API as 3D coordinates `[x,y,z]`.
+Product quantities are ignored for simplicity.
+Euler distance is used to compute distance between the picker and products. 
 
+## Setup
+- copy `.env.template` to `.env` and set your `BOXPI_API_KEY`
+- install depencencies: `yarn install`
 ## Running the app
 
 ```bash
@@ -40,34 +28,58 @@ $ yarn run start
 
 # watch mode
 $ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
 ```
+The app will run on port 3000 by default.
 
-## Test
 
-```bash
-# unit tests
-$ yarn run test
+## Usage
+There is single endpoint available: `POST /picking/optimize`.
+It accepts list of product IDs and starting position for picking as request body. 
 
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
+request:
+```json
+{
+    "productIds": [
+        "product-132",
+        "product-21",
+        "product-380"
+    ],
+    "startingPosition": {
+        "x": 30,
+        "y": 20,
+        "z": 90
+    }
+}
 ```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
+response:
+```json
+{
+  "pickingPath": [
+    {
+      "positionId": "position-515",
+      "x": 15,
+      "y": 12,
+      "z": 100,
+      "productId": "product-132",
+      "quantity": 1
+    },
+    {
+      "positionId": "position-295",
+      "x": 75,
+      "y": 0,
+      "z": 100,
+      "productId": "product-380",
+      "quantity": 11
+    },
+    {
+      "positionId": "position-769",
+      "x": 57,
+      "y": 11,
+      "z": 200,
+      "productId": "product-21",
+      "quantity": 6
+    }
+  ],
+  "totalDistance": 183.11209986229667
+}
+```
